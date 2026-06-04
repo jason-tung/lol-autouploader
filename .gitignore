@@ -17,6 +17,14 @@ dist/
 build/
 *.spec
 
+# Generated icon assets (built from SVG at build time)
+icon.png
+icon.ico
+
+# Release package
+release/
+lol-autouploader.zip
+
 # Python
 __pycache__/
 *.py[cod]

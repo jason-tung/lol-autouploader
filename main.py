@@ -45,7 +45,7 @@ def load_config(base_dir: str) -> dict:
 def build_title(game_info: dict) -> str:
     outcome = "Win" if game_info["win"] else "Loss"
     kda = f"{game_info['kills']}/{game_info['deaths']}/{game_info['assists']}"
-    return f"{outcome} {kda} vs {game_info['enemy_jungler']}"
+    return f"{outcome} {kda} {game_info['my_champion']} vs {game_info['enemy_jungler']}"
 
 
 def log(msg: str):
@@ -82,14 +82,16 @@ def _set_startup(exe_path: str, enable: bool):
 # System tray
 # ---------------------------------------------------------------------------
 
+def _resource_path(filename: str) -> str:
+    if getattr(sys, "frozen", False):
+        return os.path.join(sys._MEIPASS, filename)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+
+
 def _make_tray_icon():
-    from PIL import Image, ImageDraw
-    size = 64
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.ellipse([0, 0, size - 1, size - 1], fill=(200, 155, 60))   # gold ring
-    draw.ellipse([6, 6, size - 7, size - 7], fill=(12, 80, 140))    # blue fill
-    return img
+    from PIL import Image
+    path = _resource_path("icon.png")
+    return Image.open(path).convert("RGBA")
 
 
 def run_tray(exe_path: str, stop_event: threading.Event):
