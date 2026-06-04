@@ -27,5 +27,6 @@ build:
 	-copy config.json dist\config.json
 	@echo === Build complete. Copy client_secrets.json into dist\ before running. ===
 
-release: build
-	python package_release.py
+release:
+	@if "$(VERSION)"=="" (echo ERROR: Specify version: make release VERSION=1.2.3 && exit 1)
+	python do_release.py $(VERSION) $(NOTES)
