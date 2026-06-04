@@ -101,7 +101,16 @@ This is the default format used by [Outplayed / Overwolf](https://go.overwolf.co
 
 **Using the exe (recommended):**
 
-Place `autouploader.exe`, `config.json`, and `client_secrets.json` in the same folder. Double-click to run — it will appear in the system tray with no console window.
+1. Download `lol-autouploader.zip` from the [latest release](https://github.com/jason-tung/lol-autouploader/releases/latest)
+2. Extract the zip to a folder of your choice
+3. Copy `config.example.json` to `config.json` and fill in your values (see [Configure](#5-configure) above)
+4. Place `client_secrets.json` (from YouTube OAuth setup) in the same folder
+5. Double-click `autouploader.exe` — it will appear in the system tray with no console window
+
+Right-click the tray icon to:
+- **Open Log** — view `run.log` (cleared on each launch)
+- **Start on Login** — toggle automatic startup with Windows
+- **Exit** — stop the uploader
 
 Right-click the tray icon to:
 - **Open Log** — view `run.log` (cleared on each launch)
