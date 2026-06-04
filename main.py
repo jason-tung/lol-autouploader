@@ -152,20 +152,24 @@ def _fmt_game(g: dict) -> str:
     return f"  {g['my_champion']} | {outcome} {kda} vs {g['enemy_jungler']} | {started}"
 
 
-def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str):
-    log("Checking for new ranked games...")
+def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str,
+                        quiet: bool = False) -> bool:
+    """Return True if any new games were found and processed."""
+    if not quiet:
+        log("Checking for new ranked games...")
     try:
         match_ids = riot.get_ranked_match_ids(count=20)
     except RiotAPIError as e:
         log(f"Riot API error: {e}")
-        return
+        return False
 
     new_ids = [mid for mid in match_ids if not db.is_seen(mid)]
     already_done = len(match_ids) - len(new_ids)
 
     if not new_ids:
-        log(f"No new games ({already_done} already seen).")
-        return
+        if not quiet:
+            log(f"No new games ({already_done} already seen).")
+        return False
 
     # Fetch and parse all new matches (oldest first)
     parsed: list[dict] = []
@@ -204,7 +208,7 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
             db.record_skipped(g["match_id"])
 
     if not to_upload:
-        return
+        return True
 
     log(f"Uploading {len(to_upload)}:")
     for game_info, video_path in to_upload:
@@ -225,13 +229,17 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
             )
         except FileNotFoundError as e:
             log(f"  {e}")
-            return
+            return True
         except Exception as e:
             log(f"  Upload failed: {e}")
             continue
 
         db.record_upload(game_info, video_path, video_id, title)
         log(f"  Uploaded -> https://youtube.com/watch?v={video_id}")
+    return True
+
+
+_QUIET_LOG_INTERVAL = 30 * 60  # seconds between "still polling" notices
 
 
 def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,
@@ -240,15 +248,37 @@ def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,
     log(f"  Videos dir:    {config['videos_dir']}")
     log(f"  Poll interval: {config['poll_interval_seconds']}s")
     log(f"  DB:            {os.path.join(base_dir, 'uploads.db')}")
+    log("  Quiet mode: 'No new games' messages suppressed; status logged every 30 min.")
+
+    last_status_log = 0.0      # epoch seconds of last quiet-period summary
+    quiet_polls = 0            # polls skipped silently since last summary
 
     while not stop_event.is_set():
+        now = time.time()
+        due_for_summary = (now - last_status_log) >= _QUIET_LOG_INTERVAL
+
         try:
-            process_new_matches(riot, db, config, base_dir)
+            found_new = process_new_matches(
+                riot, db, config, base_dir,
+                quiet=not due_for_summary,
+            )
         except Exception as e:
             log(f"Unexpected error: {e}")
+            found_new = False
+
+        if due_for_summary:
+            if not found_new:
+                log(
+                    f"Still polling every {config.get('poll_interval_seconds', 15)}s "
+                    f"in the background — no new games in the last 30 min "
+                    f"({quiet_polls} silent poll(s)). Next status in 30 min."
+                )
+            last_status_log = time.time()
+            quiet_polls = 0
+        elif not found_new:
+            quiet_polls += 1
 
         interval = config.get("poll_interval_seconds", 15)
-        log(f"Sleeping {interval}s until next check...")
         stop_event.wait(interval)
 
     log("Auto-uploader stopped.")
