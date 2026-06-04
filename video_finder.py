@@ -11,7 +11,7 @@ def _parse_video_datetime(filename: str) -> datetime | None:
         return None
 
 
-def find_matching_video(videos_dir: str, game_info: dict, tolerance_minutes: int = 90,
+def find_matching_video(videos_dir: str, game_info: dict, tolerance_minutes: int = 8,
                         excluded_paths: set[str] | None = None) -> str | None:
     """
     Find the video whose recording start time best matches the game.

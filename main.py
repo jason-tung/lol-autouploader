@@ -185,7 +185,7 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
         video_path = find_matching_video(
             config["videos_dir"],
             game_info,
-            tolerance_minutes=config.get("video_match_tolerance_minutes", 90),
+            tolerance_minutes=config.get("video_match_tolerance_minutes", 8),
             excluded_paths=used_video_paths,
         )
         if video_path:
@@ -246,7 +246,7 @@ def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,
         except Exception as e:
             log(f"Unexpected error: {e}")
 
-        interval = config.get("poll_interval_seconds", 300)
+        interval = config.get("poll_interval_seconds", 10)
         log(f"Sleeping {interval}s until next check...")
         stop_event.wait(interval)
 
