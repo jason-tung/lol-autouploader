@@ -2,13 +2,15 @@
 
 Watches your League of Legends match history and automatically uploads your ranked game recordings to YouTube.
 
-After each game it finds the matching `.mp4` in your recordings folder, uploads it as unlisted, adds it to a playlist, and titles it like `Win 7/4/11 vs Nocturne`.
+After each game it finds the matching `.mp4` in your recordings folder, uploads it as unlisted, adds it to a playlist, and titles it like `Win 7/7/11 Kha'Zix vs Rengar`.
 
 ---
 
 ## How it works
 
 Every few minutes the program polls the Riot API for new ranked solo/duo games. For each new game it finds the recording whose filename timestamp falls within the game's time window, uploads it to YouTube, and writes the match to a local database so it's never processed again.
+
+The program runs silently in the system tray — right-click the tray icon to open the log, toggle start on login, or exit.
 
 ---
 
@@ -97,7 +99,12 @@ This is the default format used by [Outplayed / Overwolf](https://go.overwolf.co
 
 **Using the exe (recommended):**
 
-Place `autouploader.exe`, `config.json`, and `client_secrets.json` in the same folder. Double-click to run, or pin to the taskbar.
+Place `autouploader.exe`, `config.json`, and `client_secrets.json` in the same folder. Double-click to run — it will appear in the system tray with no console window.
+
+Right-click the tray icon to:
+- **Open Log** — view `run.log` (cleared on each launch)
+- **Start on Login** — toggle automatic startup with Windows
+- **Exit** — stop the uploader
 
 **From source:**
 
@@ -112,10 +119,9 @@ make run
 ## Building the exe from source
 
 ```bash
-make build
+make build        # builds dist\autouploader.exe
+make release      # builds exe + packages lol-autouploader.zip for distribution
 ```
-
-Output is `dist\autouploader.exe`. Copy `client_secrets.json` into `dist\` before running.
 
 ---
 
@@ -125,6 +131,7 @@ Output is `dist\autouploader.exe`. Copy `client_secrets.json` into `dist\` befor
 |---|---|
 | `token.pickle` | Saved YouTube OAuth token — delete to re-authorize |
 | `uploads.db` | SQLite database of every uploaded match — do not delete or games will re-upload |
+| `run.log` | Log of the current session — cleared on each launch, open via tray menu |
 
 ---
 
