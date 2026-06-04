@@ -14,6 +14,7 @@ If no release notes are provided, they are generated from git log since the last
 import subprocess
 import sys
 import os
+import tempfile
 
 KOFI = "If this saved you some time, feel free to buy me a coffee ☕\n[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/jasbob)"
 ZIP = "lol-autouploader.zip"
@@ -78,9 +79,15 @@ def main():
     run("git push")
     run("git push --tags")
 
-    # Create GitHub release
+    # Create GitHub release — write notes to a file to avoid shell escaping issues
     print(f"\n=== Creating GitHub release {tag} ===")
-    run(f'gh release create {tag} {ZIP} --title "{tag}" --notes "{notes}"')
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write(notes)
+        notes_file = f.name
+    try:
+        run(f'gh release create {tag} {ZIP} --title "{tag}" --notes-file "{notes_file}"')
+    finally:
+        os.unlink(notes_file)
 
     print(f"\nDone! https://github.com/jason-tung/lol-autouploader/releases/tag/{tag}")
 
