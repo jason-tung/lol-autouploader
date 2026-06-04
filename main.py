@@ -128,6 +128,13 @@ def run_tray(exe_path: str, stop_event: threading.Event):
 # Polling logic
 # ---------------------------------------------------------------------------
 
+def _fmt_game(g: dict) -> str:
+    outcome = "Win" if g["win"] else "Loss"
+    kda = f"{g['kills']}/{g['deaths']}/{g['assists']}"
+    started = g["game_start_local"].strftime("%m/%d %H:%M")
+    return f"  {g['my_champion']} | {outcome} {kda} vs {g['enemy_jungler']} | {started}"
+
+
 def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str):
     log("Checking for new ranked games...")
     try:
@@ -137,47 +144,55 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
         return
 
     new_ids = [mid for mid in match_ids if not db.is_uploaded(mid)]
+    already_done = len(match_ids) - len(new_ids)
+
     if not new_ids:
-        log("No new games to upload.")
+        log(f"No new games ({already_done} already uploaded).")
         return
 
-    log(f"Found {len(new_ids)} new game(s).")
-
-    # Track videos assigned this session so two matches in one poll don't share a video
-    used_video_paths: set[str] = set()
-
-    # Process oldest first so uploads are in chronological order
+    # Fetch and parse all new matches (oldest first)
+    parsed: list[dict] = []
     for match_id in reversed(new_ids):
-        log(f"Processing {match_id}...")
         try:
-            match = riot.get_match(match_id)
-            game_info = riot.parse_match(match)
-        except RiotAPIError as e:
-            log(f"  Error fetching match: {e}")
-            continue
-        except Exception as e:
-            log(f"  Unexpected error parsing match: {e}")
-            continue
+            game_info = riot.parse_match(riot.get_match(match_id))
+            parsed.append(game_info)
+        except (RiotAPIError, Exception) as e:
+            log(f"  Error fetching {match_id}: {e}")
 
-        log(f"  {game_info['my_champion']} | {'Win' if game_info['win'] else 'Loss'} | "
-            f"{game_info['kills']}/{game_info['deaths']}/{game_info['assists']} | "
-            f"vs {game_info['enemy_jungler']} | "
-            f"Started: {game_info['game_start_local'].strftime('%m/%d %H:%M')}")
+    # Assign videos
+    used_video_paths: set[str] = set()
+    no_video: list[dict] = []
+    to_upload: list[tuple[dict, str]] = []
 
+    for game_info in parsed:
         video_path = find_matching_video(
             config["videos_dir"],
             game_info,
             tolerance_minutes=config.get("video_match_tolerance_minutes", 90),
             excluded_paths=used_video_paths,
         )
+        if video_path:
+            used_video_paths.add(video_path)
+            to_upload.append((game_info, video_path))
+        else:
+            no_video.append(game_info)
 
-        if not video_path:
-            log("  No matching video found. Skipping.")
-            continue
+    # --- Summary ---
+    log(f"{already_done} already uploaded, {len(new_ids)} new.")
 
-        log(f"  Matched video: {os.path.basename(video_path)}")
+    if no_video:
+        log(f"Skipping {len(no_video)} (no video):")
+        for g in no_video:
+            log(_fmt_game(g))
+
+    if not to_upload:
+        return
+
+    log(f"Uploading {len(to_upload)}:")
+    for game_info, video_path in to_upload:
         title = build_title(game_info)
-        log(f"  YouTube title: {title}")
+        log(f"{_fmt_game(game_info)}")
+        log(f'  Video: {os.path.basename(video_path)} → "{title}"')
 
         try:
             video_id = upload_video(
@@ -189,14 +204,13 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
             )
         except FileNotFoundError as e:
             log(f"  {e}")
-            return  # No point continuing without YouTube credentials
+            return
         except Exception as e:
             log(f"  Upload failed: {e}")
             continue
 
         db.record_upload(game_info, video_path, video_id, title)
-        used_video_paths.add(video_path)
-        log(f"  Uploaded! https://youtube.com/watch?v={video_id}")
+        log(f"  Uploaded → https://youtube.com/watch?v={video_id}")
 
 
 def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,
@@ -229,9 +243,7 @@ def main():
 
     if frozen:
         log_path = os.path.join(base_dir, "run.log")
-        if os.path.exists(log_path) and os.path.getsize(log_path) > 5 * 1024 * 1024:
-            os.replace(log_path, log_path + ".bak")
-        log_file = open(log_path, "a", encoding="utf-8", buffering=1)
+        log_file = open(log_path, "w", encoding="utf-8", buffering=1)
         sys.stdout = log_file
         sys.stderr = log_file
 
