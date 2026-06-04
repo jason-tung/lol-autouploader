@@ -2,7 +2,7 @@
 
 Watches your League of Legends match history and automatically uploads your ranked game recordings to YouTube.
 
-After each game it finds the matching `.mp4` in your recordings folder, uploads it as unlisted, adds it to a playlist, and titles it like `Win 7/7/11 Kha'Zix vs Rengar`.
+After each game it finds the matching `.mp4` in your recordings folder, uploads it as unlisted, adds it to a playlist, and titles it like `06/02 Win 7/7/11 Kha'Zix vs Rengar`.
 
 ---
 
@@ -81,7 +81,7 @@ Copy `config.example.json` to `config.json` (in the same folder as the exe) and 
 | `puuid` | Your account PUUID (see step 2) |
 | `videos_dir` | Folder where your `.mp4` recordings are saved |
 | `poll_interval_seconds` | How often to check for new games (default 300 = 5 min) |
-| `video_match_tolerance_minutes` | How early a recording can start before a game and still match (default 90) |
+| `video_match_tolerance_minutes` | How early a recording can start before a game and still match (default 90). The window always closes 5 minutes after game start, so recordings that start mid-game are not considered. |
 | `youtube_privacy` | `unlisted`, `private`, or `public` |
 | `youtube_playlist_id` | The playlist to add uploads to |
 

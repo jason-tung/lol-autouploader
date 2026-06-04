@@ -45,7 +45,8 @@ def load_config(base_dir: str) -> dict:
 def build_title(game_info: dict) -> str:
     outcome = "Win" if game_info["win"] else "Loss"
     kda = f"{game_info['kills']}/{game_info['deaths']}/{game_info['assists']}"
-    return f"{outcome} {kda} {game_info['my_champion']} vs {game_info['enemy_jungler']}"
+    date = game_info["game_start_local"].strftime("%m/%d")
+    return f"{date} {outcome} {kda} {game_info['my_champion']} vs {game_info['enemy_jungler']}"
 
 
 def log(msg: str):
@@ -192,8 +193,11 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
     for game_info, video_path in to_upload:
         title = build_title(game_info)
         log(f"{_fmt_game(game_info)}")
-        log(f'  Video: {os.path.basename(video_path)} → "{title}"')
+        log(f'      {os.path.basename(video_path)}  ->  "{title}"')
 
+    for game_info, video_path in to_upload:
+        title = build_title(game_info)
+        log(f"Starting: {_fmt_game(game_info).strip()}")
         try:
             video_id = upload_video(
                 video_path=video_path,
@@ -210,7 +214,7 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
             continue
 
         db.record_upload(game_info, video_path, video_id, title)
-        log(f"  Uploaded → https://youtube.com/watch?v={video_id}")
+        log(f"  Uploaded -> https://youtube.com/watch?v={video_id}")
 
 
 def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,

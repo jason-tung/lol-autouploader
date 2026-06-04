@@ -1,6 +1,7 @@
 import os
 import pickle
 import time
+from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -76,7 +77,10 @@ def upload_video(video_path: str, title: str, privacy: str, base_dir: str,
     media = MediaFileUpload(video_path, chunksize=10 * 1024 * 1024, resumable=True)
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
 
-    print(f"  Uploading '{os.path.basename(video_path)}' ({_fmt_size(total_bytes)})...", flush=True)
+    def _log(msg: str):
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+
+    _log(f"  Uploading '{os.path.basename(video_path)}' ({_fmt_size(total_bytes)})...")
     start_time = time.time()
     last_log_time = start_time
     response = None
@@ -89,17 +93,16 @@ def upload_video(video_path: str, title: str, privacy: str, base_dir: str,
             elapsed = now - start_time
             speed = uploaded / elapsed if elapsed > 0 else 0
             remaining = (total_bytes - uploaded) / speed if speed > 0 else 0
-            print(
+            _log(
                 f"  Progress: {int(pct * 100)}% | "
                 f"{_fmt_size(uploaded)}/{_fmt_size(total_bytes)} | "
-                f"{_fmt_size(int(speed))}/s | ETA {_fmt_eta(remaining)}",
-                flush=True,
+                f"{_fmt_size(int(speed))}/s | ETA {_fmt_eta(remaining)}"
             )
             last_log_time = now
 
     elapsed = time.time() - start_time
     avg_speed = total_bytes / elapsed if elapsed > 0 else 0
-    print(f"  Done in {_fmt_eta(elapsed)} (avg {_fmt_size(int(avg_speed))}/s)", flush=True)
+    _log(f"  Done in {_fmt_eta(elapsed)} (avg {_fmt_size(int(avg_speed))}/s)")
 
     video_id = response["id"]
 
@@ -117,8 +120,8 @@ def upload_video(video_path: str, title: str, privacy: str, base_dir: str,
                     }
                 },
             ).execute()
-            print(f"  Added to playlist.")
+            _log("  Added to playlist.")
         except Exception as e:
-            print(f"  Warning: playlist insert failed ({e}). Video uploaded but not added to playlist.")
+            _log(f"  Warning: playlist insert failed ({e}). Video uploaded but not added to playlist.")
 
     return video_id

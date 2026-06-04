@@ -17,14 +17,16 @@ def find_matching_video(videos_dir: str, game_info: dict, tolerance_minutes: int
     Find the video whose recording start time best matches the game.
 
     The recording filename encodes its start time. A match is valid if the
-    recording started within [game_start - tolerance, game_end + 30min].
+    recording started within [game_start - tolerance, game_start + 5min].
     Returns the best matching video path, or None if none found.
     """
     game_start: datetime = game_info["game_start_local"]
-    game_end: datetime = game_start + timedelta(seconds=game_info["game_duration_s"])
 
+    # Recordings start in lobby/champ-select, so always near game_start — not mid-game.
+    # Using game_end as the window anchor would let a short game's window bleed into
+    # the next game's recording start time and steal the wrong video.
     window_open = game_start - timedelta(minutes=tolerance_minutes)
-    window_close = game_end + timedelta(minutes=10)
+    window_close = game_start + timedelta(minutes=5)
 
     excluded_normalized = {os.path.normcase(p) for p in (excluded_paths or set())}
 
