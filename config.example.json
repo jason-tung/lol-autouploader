@@ -2,7 +2,7 @@
   "riot_api_key": "RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "puuid": "your-puuid-here",
   "videos_dir": "C:\\Users\\YourName\\Videos\\Ascent",
-  "poll_interval_seconds": 10,
+  "poll_interval_seconds": 15,
   "video_match_tolerance_minutes": 8,
   "youtube_privacy": "unlisted",
   "youtube_playlist_id": "your-playlist-id-here"

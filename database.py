@@ -31,13 +31,29 @@ class Database:
                     game_duration_s INTEGER NOT NULL
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS skipped (
+                    match_id TEXT PRIMARY KEY NOT NULL
+                )
+            """)
 
-    def is_uploaded(self, match_id: str) -> bool:
+    def is_seen(self, match_id: str) -> bool:
         with self._conn() as conn:
             row = conn.execute(
                 "SELECT 1 FROM uploads WHERE match_id = ?", (match_id,)
             ).fetchone()
+            if row:
+                return True
+            row = conn.execute(
+                "SELECT 1 FROM skipped WHERE match_id = ?", (match_id,)
+            ).fetchone()
             return row is not None
+
+    def record_skipped(self, match_id: str):
+        with self._conn() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO skipped (match_id) VALUES (?)", (match_id,)
+            )
 
     def record_upload(self, game_info: dict, video_file: str, youtube_video_id: str, title: str):
         with self._conn() as conn:

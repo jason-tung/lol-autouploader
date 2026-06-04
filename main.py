@@ -160,11 +160,11 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
         log(f"Riot API error: {e}")
         return
 
-    new_ids = [mid for mid in match_ids if not db.is_uploaded(mid)]
+    new_ids = [mid for mid in match_ids if not db.is_seen(mid)]
     already_done = len(match_ids) - len(new_ids)
 
     if not new_ids:
-        log(f"No new games ({already_done} already uploaded).")
+        log(f"No new games ({already_done} already seen).")
         return
 
     # Fetch and parse all new matches (oldest first)
@@ -195,12 +195,13 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
             no_video.append(game_info)
 
     # --- Summary ---
-    log(f"{already_done} already uploaded, {len(new_ids)} new.")
+    log(f"{already_done} already seen, {len(new_ids)} new.")
 
     if no_video:
         log(f"Skipping {len(no_video)} (no video):")
         for g in no_video:
             log(_fmt_game(g))
+            db.record_skipped(g["match_id"])
 
     if not to_upload:
         return
@@ -246,7 +247,7 @@ def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,
         except Exception as e:
             log(f"Unexpected error: {e}")
 
-        interval = config.get("poll_interval_seconds", 10)
+        interval = config.get("poll_interval_seconds", 15)
         log(f"Sleeping {interval}s until next check...")
         stop_event.wait(interval)
 

@@ -70,7 +70,7 @@ Copy `config.example.json` to `config.json` (in the same folder as the exe) and 
   "riot_api_key": "RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "puuid": "your-puuid-here",
   "videos_dir": "C:\\Users\\YourName\\Videos\\Ascent",
-  "poll_interval_seconds": 10,
+  "poll_interval_seconds": 15,
   "video_match_tolerance_minutes": 8,
   "youtube_privacy": "unlisted",
   "youtube_playlist_id": "PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -82,7 +82,7 @@ Copy `config.example.json` to `config.json` (in the same folder as the exe) and 
 | `riot_api_key` | Your Riot dev/production API key |
 | `puuid` | Your account PUUID (see step 2) |
 | `videos_dir` | Folder where your `.mp4` recordings are saved |
-| `poll_interval_seconds` | How often to check for new games (default 10s) |
+| `poll_interval_seconds` | How often to check for new games (default 15s) |
 | `video_match_tolerance_minutes` | How early a recording can start before a game and still match (default 8 min). The window always closes 5 minutes after game start, so recordings that start mid-game are not considered. |
 | `youtube_privacy` | `unlisted`, `private`, or `public` |
 | `youtube_playlist_id` | The playlist to add uploads to |
