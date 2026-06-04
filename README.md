@@ -1,5 +1,7 @@
 # LoL Auto-Uploader
 
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/jasbob)
+
 Watches your League of Legends match history and automatically uploads your ranked game recordings to YouTube.
 
 After each game it finds the matching `.mp4` in your recordings folder, uploads it as unlisted, adds it to a playlist, and titles it like `06/02 Win 7/7/11 Kha'Zix vs Rengar`.
@@ -136,6 +138,8 @@ make release      # builds exe + packages lol-autouploader.zip for distribution
 ---
 
 ## Troubleshooting
+
+**Startup error popup / empty log** — `config.json` is missing or still has placeholder values. Copy `config.example.json` to `config.json` and fill in your real API key, PUUID, and videos folder path.
 
 **401 errors from Riot API** — Your dev key expired. Get a new one at [developer.riotgames.com](https://developer.riotgames.com) and update `config.json`. Dev keys expire every 24 hours; apply for a persistent personal key to avoid this.
 

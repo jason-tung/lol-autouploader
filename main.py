@@ -37,9 +37,25 @@ def get_base_dir() -> str:
 def load_config(base_dir: str) -> dict:
     path = os.path.join(base_dir, "config.json")
     if not os.path.exists(path):
-        raise FileNotFoundError(f"config.json not found at {path}")
+        raise FileNotFoundError(
+            f"config.json not found at {path}\n\n"
+            "Copy config.example.json to config.json and fill in your API key, PUUID, and videos folder."
+        )
     with open(path) as f:
-        return json.load(f)
+        cfg = json.load(f)
+
+    placeholders = {
+        "riot_api_key": "RGAPI-",
+        "puuid": "your-puuid-here",
+    }
+    for field, placeholder in placeholders.items():
+        val = cfg.get(field, "")
+        if not val or val == placeholder or val.endswith("xxxxxxxxxxxx"):
+            raise ValueError(
+                f'config.json: "{field}" is not set.\n\n'
+                "Open config.json and fill in your real values before running."
+            )
+    return cfg
 
 
 def build_title(game_info: dict) -> str:
@@ -253,9 +269,11 @@ def main():
 
     try:
         config = load_config(base_dir)
-    except FileNotFoundError as e:
-        if not frozen:
-            print(e)
+    except (FileNotFoundError, ValueError) as e:
+        log(str(e))
+        if frozen:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, str(e), "LoL Auto-Uploader — Setup Error", 0x10)
         return
 
     db_path = os.path.join(base_dir, "uploads.db")
