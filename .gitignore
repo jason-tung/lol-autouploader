@@ -1,0 +1,25 @@
+# Personal config (copy config.example.json → config.json and fill in your values)
+config.json
+
+# YouTube OAuth credentials — never commit these
+client_secrets.json
+client_secret_*.json
+token.pickle
+
+# Database of uploaded games
+uploads.db
+
+# Runtime logs
+run.log
+
+# PyInstaller output
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
