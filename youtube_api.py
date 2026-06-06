@@ -102,7 +102,7 @@ def upload_video(video_path: str, title: str, privacy: str, base_dir: str,
 
     elapsed = time.time() - start_time
     avg_speed = total_bytes / elapsed if elapsed > 0 else 0
-    _log(f"  Done in {_fmt_eta(elapsed)} (avg {_fmt_size(int(avg_speed))}/s)")
+    _log(f"  Done: '{title}' in {_fmt_eta(elapsed)} (avg {_fmt_size(int(avg_speed))}/s)")
 
     video_id = response["id"]
 
