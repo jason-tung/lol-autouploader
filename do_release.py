@@ -38,6 +38,12 @@ def main():
     tag = f"v{version}"
     extra_notes = sys.argv[2:]
 
+    # Stamp version into version.py so the app knows what it is (and can self-update)
+    version_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "version.py")
+    with open(version_py, "w", encoding="utf-8") as f:
+        f.write(f'__version__ = "{version}"\n')
+    print(f"Stamped version.py -> {version}")
+
     # Check for uncommitted changes
     dirty = subprocess.run("git status --porcelain", shell=True, capture_output=True, text=True).stdout.strip()
     if dirty:

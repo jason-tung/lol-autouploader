@@ -21,6 +21,7 @@ from datetime import datetime
 
 from database import Database
 from riot_api import RiotAPI, RiotAPIError
+from version import __version__
 from video_finder import find_matching_video
 from youtube_api import upload_video
 
@@ -117,7 +118,69 @@ def _make_tray_icon():
 def run_tray(exe_path: str, stop_event: threading.Event):
     import pystray
 
+    from updater import check_for_update, download_and_apply
+
     base_dir = os.path.dirname(exe_path)
+    update_info = {"version": None, "url": None}
+
+    # --- Update handling ---------------------------------------------------
+
+    def do_check(icon, notify_if_none=False):
+        """Query GitHub once; on a newer release, surface it in the menu + notify."""
+        try:
+            result = check_for_update()
+        except Exception as e:
+            log(f"Update check failed: {e}")
+            if notify_if_none:
+                icon.notify("Couldn't check for updates (network?).", "LoL Auto-Uploader")
+            return
+        if result:
+            update_info["version"], update_info["url"] = result
+            icon.update_menu()
+            icon.notify(
+                f"Version {result[0]} is available. Right-click the tray icon to update.",
+                "LoL Auto-Uploader update",
+            )
+            log(f"Update available: v{result[0]} (current v{__version__})")
+        elif notify_if_none:
+            icon.notify(f"You're up to date (v{__version__}).", "LoL Auto-Uploader")
+
+    def update_checker(icon):
+        """Check ~10s after startup, then once a day, until the app stops."""
+        if stop_event.wait(10):
+            return
+        while not stop_event.is_set():
+            do_check(icon)
+            if stop_event.wait(24 * 3600):
+                return
+
+    def update_available(item):
+        return update_info["version"] is not None
+
+    def update_text(item):
+        return f"Update to v{update_info['version']}"
+
+    def on_update(icon, item):
+        url = update_info["url"]
+        if not url:
+            return
+
+        def worker():
+            try:
+                icon.notify("Downloading update...", "LoL Auto-Uploader")
+                download_and_apply(url, exe_path, log=log)
+                stop_event.set()
+                icon.stop()
+            except Exception as e:
+                log(f"Update failed: {e}")
+                icon.notify(f"Update failed: {e}", "LoL Auto-Uploader")
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def on_check_now(icon, item):
+        threading.Thread(target=do_check, args=(icon, True), daemon=True).start()
+
+    # --- Standard menu actions ---------------------------------------------
 
     def on_open_log(icon, item):
         log_path = os.path.join(base_dir, "run.log")
@@ -135,12 +198,17 @@ def run_tray(exe_path: str, stop_event: threading.Event):
         icon.stop()
 
     menu = pystray.Menu(
+        pystray.MenuItem(update_text, on_update, visible=update_available),
+        pystray.MenuItem("Check for Updates", on_check_now),
         pystray.MenuItem("Open Log", on_open_log),
         pystray.MenuItem("Start on Login", on_toggle_startup, checked=startup_checked),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Exit", on_exit),
     )
-    icon = pystray.Icon(_REGISTRY_NAME, _make_tray_icon(), "LoL Auto-Uploader", menu)
+    icon = pystray.Icon(
+        _REGISTRY_NAME, _make_tray_icon(), f"LoL Auto-Uploader v{__version__}", menu
+    )
+    threading.Thread(target=update_checker, args=(icon,), daemon=True).start()
     icon.run()
 
 
@@ -239,7 +307,7 @@ def process_new_matches(riot: RiotAPI, db: Database, config: dict, base_dir: str
 
 def poll_loop(riot: RiotAPI, db: Database, config: dict, base_dir: str,
               stop_event: threading.Event):
-    log("Auto-uploader started.")
+    log(f"Auto-uploader started (v{__version__}).")
     log(f"  Videos dir:    {config['videos_dir']}")
     log(f"  Poll interval: {config['poll_interval_seconds']}s")
     log(f"  DB:            {os.path.join(base_dir, 'uploads.db')}")
