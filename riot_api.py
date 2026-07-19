@@ -55,6 +55,7 @@ class RiotAPI:
             "kills": player["kills"],
             "deaths": player["deaths"],
             "assists": player["assists"],
+            "cs": player["totalMinionsKilled"] + player["neutralMinionsKilled"],
             "enemy_jungler": enemy_jungler["championName"] if enemy_jungler else "Unknown",
             "my_champion": player["championName"],
         }

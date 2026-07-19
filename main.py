@@ -62,7 +62,10 @@ def build_title(game_info: dict) -> str:
     outcome = "Win" if game_info["win"] else "Loss"
     kda = f"{game_info['kills']}/{game_info['deaths']}/{game_info['assists']}"
     date = game_info["game_start_local"].strftime("%m/%d")
-    return f"{date} {outcome} {kda} {game_info['my_champion']} vs {game_info['enemy_jungler']}"
+    minutes = game_info["game_duration_s"] / 60
+    cspm = game_info["cs"] / minutes if minutes else 0
+    cs = f"{cspm:.1f} cs/m"
+    return f"{date} {outcome} {kda} {cs} {game_info['my_champion']} vs {game_info['enemy_jungler']}"
 
 
 def log(msg: str):
