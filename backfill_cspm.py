@@ -26,7 +26,15 @@ LIMIT = int(sys.argv[2]) if len(sys.argv) > 2 else 8
 KDA_RE = re.compile(r"\d+/\d+/\d+")
 
 
-def compute_cspm(key, puuid, match_id):
+def config_puuids(cfg):
+    """Every PUUID in the config, supporting both the accounts list and the old flat key."""
+    accounts = cfg.get("accounts")
+    if accounts:
+        return {a["puuid"] for a in accounts}
+    return {cfg["puuid"]}
+
+
+def compute_cspm(key, puuids, match_id):
     r = requests.get(
         f"https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}",
         headers={"X-Riot-Token": key},
@@ -34,7 +42,7 @@ def compute_cspm(key, puuid, match_id):
     )
     r.raise_for_status()
     info = r.json()["info"]
-    p = next(x for x in info["participants"] if x["puuid"] == puuid)
+    p = next(x for x in info["participants"] if x["puuid"] in puuids)
     cs = p["totalMinionsKilled"] + p["neutralMinionsKilled"]
     minutes = info["gameDuration"] / 60
     return cs / minutes if minutes else 0.0
@@ -52,7 +60,7 @@ def add_cspm(title, cspm):
 
 def main():
     cfg = json.load(open(os.path.join(BASE, "config.json")))
-    key, puuid = cfg["riot_api_key"], cfg["puuid"]
+    key, puuids = cfg["riot_api_key"], config_puuids(cfg)
 
     conn = sqlite3.connect(os.path.join(BASE, "uploads.db"))
     conn.row_factory = sqlite3.Row
@@ -75,7 +83,7 @@ def main():
         snip = items[0]["snippet"]
         cur = snip["title"]
 
-        cspm = compute_cspm(key, puuid, row["match_id"])
+        cspm = compute_cspm(key, puuids, row["match_id"])
         new = add_cspm(cur, cspm)
 
         if new == cur:

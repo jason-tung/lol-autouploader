@@ -57,9 +57,10 @@ def main():
     if result.returncode != 0:
         sys.exit(1)
 
-    # Package zip
+    # Package zip (use the exact interpreter running this script — "python" via
+    # cmd.exe doesn't resolve the Windows Store alias)
     print("\n=== Packaging zip ===")
-    result = subprocess.run("python package_release.py", shell=True)
+    result = subprocess.run([sys.executable, "package_release.py"])
     if result.returncode != 0:
         sys.exit(1)
 

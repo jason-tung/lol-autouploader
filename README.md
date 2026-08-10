@@ -6,11 +6,15 @@ Watches your League of Legends match history and automatically uploads your rank
 
 After each game it finds the matching `.mp4` in your recordings folder, uploads it as unlisted, adds it to a playlist, and titles it like `06/02 Win 7/7/11 Kha'Zix vs Rengar`.
 
+Track as many accounts as you like — each one gets its own YouTube playlist and privacy setting.
+
 ---
 
 ## How it works
 
-Every few minutes the program polls the Riot API for new ranked solo/duo games. For each new game it finds the recording whose filename timestamp falls within the game's time window, uploads it to YouTube, and writes the match to a local database so it's never processed again.
+Every few minutes the program polls the Riot API for new ranked solo/duo games on **each account** you've configured. For each new game it finds the recording whose filename timestamp falls within the game's time window, uploads it to that account's playlist, and writes the match to a local database so it's never processed again.
+
+All accounts share one recordings folder. Since you can only play one account at a time, a recording claimed by one account's game is never reused for another's. If two of your own accounts were in the same game (duo), it's uploaded once — the first account to claim it wins.
 
 The program runs silently in the system tray — right-click the tray icon to open the log, toggle start on login, or exit.
 
@@ -41,7 +45,7 @@ Run this in a browser or curl, substituting your key and summoner info:
 https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/YourName/TAG?api_key=RGAPI-...
 ```
 
-Copy the `puuid` value from the response.
+Copy the `puuid` value from the response. Repeat once per account you want to track.
 
 ### 3. Set up YouTube OAuth
 
@@ -55,11 +59,13 @@ The first time you run the program a browser window will open asking you to auth
 
 ### 4. Create a YouTube playlist
 
-Create a playlist on YouTube and copy its ID from the URL:
+Create a playlist on YouTube and copy its ID from the URL — the part after `list=`:
 ```
 https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
+
+Make one playlist per account if you want each account's games kept separate.
 
 ### 5. Configure
 
@@ -68,24 +74,48 @@ Copy `config.example.json` to `config.json` (in the same folder as the exe) and 
 ```json
 {
   "riot_api_key": "RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "puuid": "your-puuid-here",
   "videos_dir": "C:\\Users\\YourName\\Videos\\Ascent",
   "poll_interval_seconds": 15,
   "video_match_tolerance_minutes": 8,
-  "youtube_privacy": "unlisted",
-  "youtube_playlist_id": "PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  "accounts": [
+    {
+      "description": "main account",
+      "puuid": "your-puuid-here",
+      "youtube_playlist_id": "PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "youtube_privacy": "unlisted"
+    },
+    {
+      "description": "smurf",
+      "puuid": "your-second-puuid-here",
+      "youtube_playlist_id": "PLyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+      "youtube_privacy": "private"
+    }
+  ]
 }
 ```
 
+**Top-level fields:**
+
 | Field | Description |
 |---|---|
-| `riot_api_key` | Your Riot dev/production API key |
-| `puuid` | Your account PUUID (see step 2) |
+| `riot_api_key` | Your Riot dev/production API key (shared by all accounts) |
 | `videos_dir` | Folder where your `.mp4` recordings are saved |
 | `poll_interval_seconds` | How often to check for new games (default 15s) |
 | `video_match_tolerance_minutes` | How early a recording can start before a game and still match (default 8 min). The window always closes 5 minutes after game start, so recordings that start mid-game are not considered. |
-| `youtube_privacy` | `unlisted`, `private`, or `public` |
-| `youtube_playlist_id` | The playlist to add uploads to |
+| `accounts` | One entry per League account to watch (see below) |
+
+**Per-account fields:**
+
+| Field | Description |
+|---|---|
+| `description` | A label for your own reference — PUUIDs aren't readable, so use this to note which account is which. Not used by the program; leave it `""` if you don't want one. |
+| `puuid` | That account's PUUID (see step 2) |
+| `youtube_playlist_id` | Playlist that this account's uploads are added to. Omit or leave empty to upload without adding to any playlist. |
+| `youtube_privacy` | `unlisted`, `private`, or `public` (default `unlisted`) |
+
+List as many accounts as you want. Each is polled independently — if one account's request fails, the others still run.
+
+> **Upgrading from a single-account config?** Old configs with a top-level `puuid`, `youtube_playlist_id`, and `youtube_privacy` still work; they're read as a one-account list. Move them into an `accounts` array when you want to add a second account.
 
 ---
 
@@ -112,17 +142,37 @@ Right-click the tray icon to:
 - **Start on Login** — toggle automatic startup with Windows
 - **Exit** — stop the uploader
 
-Right-click the tray icon to:
-- **Open Log** — view `run.log` (cleared on each launch)
-- **Start on Login** — toggle automatic startup with Windows
-- **Exit** — stop the uploader
-
 **From source:**
 
 ```bash
 pip install -r requirements.txt
 make run
 # or: python -u main.py
+```
+
+---
+
+## Command-line options
+
+Running from source (`python main.py`) accepts a few flags, all useful for checking your setup before letting it upload anything:
+
+| Flag | What it does |
+|---|---|
+| `--dry-run` | Poll every account and print exactly what *would* be uploaded, to which playlist, at which privacy. Uploads nothing and writes nothing to the database. |
+| `--once` | Do a single poll pass instead of looping forever. |
+| `--match-id ID` | Process only this match ID, even if it's older than the recent-games window. Repeatable. Implies `--once`. The match is attributed to whichever of your configured accounts played in it. |
+| `--base-dir DIR` | Read `config.json` / `uploads.db` / `token.pickle` from `DIR` instead of the source folder. Use this to run against your installed copy. |
+
+Check what a new config would do before committing to it:
+
+```bash
+python main.py --dry-run
+```
+
+Retroactively upload one specific game against your installed copy:
+
+```bash
+python main.py --match-id NA1_1234567890 --base-dir "C:\Users\You\Desktop\lol-autouploader"
 ```
 
 ---
@@ -148,7 +198,11 @@ make release      # builds exe + packages lol-autouploader.zip for distribution
 
 ## Troubleshooting
 
-**Startup error popup / empty log** — `config.json` is missing or still has placeholder values. Copy `config.example.json` to `config.json` and fill in your real API key, PUUID, and videos folder path.
+**Startup error popup / empty log** — `config.json` is missing or still has placeholder values. Copy `config.example.json` to `config.json` and fill in your real API key, PUUID, and videos folder path. The error message names the offending account by its `description`, so give each account a description you'll recognize.
+
+**A new account uploaded its whole back catalogue** — When you add an account, its last 20 ranked games are all unseen, so any that still have a matching recording will upload. Run `python main.py --dry-run` first to see exactly what a newly added account would do. Games with no recording are recorded as skipped and never revisited.
+
+**Games went to the wrong playlist** — Check that each `accounts` entry pairs the right `puuid` with the right `youtube_playlist_id`; the `description` field is only a label and has no effect on routing.
 
 **401 errors from Riot API** — Your dev key expired. Get a new one at [developer.riotgames.com](https://developer.riotgames.com) and update `config.json`. Dev keys expire every 24 hours; apply for a persistent personal key to avoid this.
 

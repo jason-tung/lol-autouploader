@@ -1,9 +1,20 @@
 {
   "riot_api_key": "RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "puuid": "your-puuid-here",
   "videos_dir": "C:\\Users\\YourName\\Videos\\Ascent",
   "poll_interval_seconds": 15,
   "video_match_tolerance_minutes": 8,
-  "youtube_privacy": "unlisted",
-  "youtube_playlist_id": "your-playlist-id-here"
+  "accounts": [
+    {
+      "description": "main account",
+      "puuid": "your-puuid-here",
+      "youtube_playlist_id": "your-playlist-id-here",
+      "youtube_privacy": "unlisted"
+    },
+    {
+      "description": "smurf (delete this block if you only have one account)",
+      "puuid": "your-second-puuid-here",
+      "youtube_playlist_id": "your-second-playlist-id-here",
+      "youtube_privacy": "unlisted"
+    }
+  ]
 }
