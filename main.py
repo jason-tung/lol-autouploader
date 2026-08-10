@@ -185,7 +185,7 @@ def _make_tray_icon():
     return Image.open(path).convert("RGBA")
 
 
-def run_tray(exe_path: str, stop_event: threading.Event):
+def run_tray(exe_path: str, stop_event: threading.Event, status: str | None = None):
     import pystray
 
     from updater import check_for_update, download_and_apply
@@ -275,9 +275,10 @@ def run_tray(exe_path: str, stop_event: threading.Event):
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Exit", on_exit),
     )
-    icon = pystray.Icon(
-        _REGISTRY_NAME, _make_tray_icon(), f"LoL Auto-Uploader v{__version__}", menu
-    )
+    tooltip = f"LoL Auto-Uploader v{__version__}"
+    if status:
+        tooltip = f"{tooltip} - {status}"
+    icon = pystray.Icon(_REGISTRY_NAME, _make_tray_icon(), tooltip, menu)
     threading.Thread(target=update_checker, args=(icon,), daemon=True).start()
     icon.run()
 
@@ -506,6 +507,11 @@ def main():
         if frozen:
             import ctypes
             ctypes.windll.user32.MessageBoxW(0, str(e), "LoL Auto-Uploader — Setup Error", 0x10)
+            # Keep the tray running so "Check for Updates" stays reachable. A config
+            # written for a newer version can't be parsed by this one, and exiting
+            # here would leave no in-app route to the version that understands it.
+            log("Config error - tray-only mode; polling is off but updates still work.")
+            run_tray(sys.executable, threading.Event(), status="config error")
         return
 
     db_path = os.path.join(base_dir, "uploads.db")
